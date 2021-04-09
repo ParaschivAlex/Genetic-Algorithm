@@ -7,8 +7,9 @@
 # ------------------------------------------Importuri si functii:------------------------------------------
 # ---------------------------------------------------------------------------------------------------------
 
-from random import randint, random  # ,randrange
+from random import randint, random, randrange, choice
 from math import log2, floor, sqrt
+from copy import deepcopy
 # from numpy import mean
 
 
@@ -22,7 +23,7 @@ def get_lg_cromozom():  # l = [log2((b-a)*10^p)]
 
 
 def get_fitness(x):
-    return parametri_functie_maximizat[0] * (x ** 2) + parametri_functie_maximizat[1] * x + parametri_functie_maximizat[2]
+    return parametri_functie_maximizat[0] * (x ** 3) + parametri_functie_maximizat[1] * (x ** 2) + parametri_functie_maximizat[2] * x + parametri_functie_maximizat[3]
     # ax^2 + bx +c
 
 
@@ -57,13 +58,15 @@ def caut_bin(lst, elem):
     return -1
 
 
-def cross2(c1, c2, poz):
-    return c1[:poz] + c2[poz:], c2[:poz] + c1[poz:]
+def cross2(c1, c2, poz1, poz2):
+    return c1[:poz1] + c2[poz1:poz2] + c1[poz2:], c2[:poz1] + c1[poz1:poz2] + c2[poz2:]
 
 
 def cross3(c1, c2, c3, poz):
     return c1[poz:] + c2[:poz], c2[poz:] + c3[:poz], c3[poz:] + c1[:poz]
 
+def flip(c, poz1, poz2):
+    return c[:poz1] + c[poz2:poz1:-1] + c[poz2:]
 
 # ---------------------------------------------------------------------------------------------------------
 # ------------------------------------------Citire date initiale:------------------------------------------
@@ -77,8 +80,9 @@ dimensiune_populatie = int(f.readline())
 
 parametri_functie_maximizat = tuple(map(int, f.readline().split()))  # creez un tuplu si fac fiecare valoare sa fie int
 # print(parametri_functie_maximizat)
+print(parametri_functie_maximizat)
 
-domeniu_de_definitie = tuple(get_domeniu_defintie(parametri_functie_maximizat[0], parametri_functie_maximizat[1], parametri_functie_maximizat[2]))
+domeniu_de_definitie = (-4, 4)
 # calculez intervalul pentru functia data
 
 precizie = float(f.readline())
@@ -132,7 +136,7 @@ for etapa in range(nr_etape):  # rulez pentru un numar de etape dat
 
     elitist_indice = fitness.index(max(fitness))
     elitist_cromozom = populatie_initiala[elitist_indice].copy()  # salvez cromozomul
-
+    print(elitist_indice, elitist_cromozom)
     populatie_initiala.remove(populatie_initiala[elitist_indice])  # si il sterg, urmeaza sa il adaug din nou la final pentru etapa urmatoare
     fitness.remove(fitness[elitist_indice])
     x_codificat.remove(x_codificat[elitist_indice])
@@ -192,9 +196,9 @@ for etapa in range(nr_etape):  # rulez pentru un numar de etape dat
     for i in range(dimensiune_populatie):  # cautarea binara a "u"-ului pe intervale
         u = random()  # generez valorile pentru u cu random [0.0,1.0)
         gasit_u_interval.append(caut_bin(intervale_de_selectie, u))  # retin in vector cromozomii gasiti
+        populatie_noua.append(populatie_initiala[gasit_u_interval[i]])
         if etapa == 0:
             g.write(f"u= {u}  selectam cromozomul {gasit_u_interval[i] + 1}\n")
-        populatie_noua.append(populatie_initiala[gasit_u_interval[i]])
     if etapa == 0:
         g.write('\n')
 
@@ -244,26 +248,32 @@ for etapa in range(nr_etape):  # rulez pentru un numar de etape dat
 
     if lg % 2 == 0:  # lungime para deci ii luam cate 2 pe toti
         while lg != 0:
-            cr1 = recombinare_indici.pop()  # iau ultimii 2 cromozomi
-            cr2 = recombinare_indici.pop()
+            cr1 = deepcopy(choice(recombinare_indici))
+            recombinare_indici.remove(cr1)
+            cr2 = deepcopy(choice(recombinare_indici))
+            recombinare_indici.remove(cr2)
             lg -= 2
-            punct_de_rupere = randint(0, lungime_cromozom)  # generez punct de rupere random de la 0 la lungimea cromozomului
+            punct_de_rupere = randint(0, lungime_cromozom // 2)  # generez punct de rupere random de la 0 la lungimea cromozomului
+            punct_de_rupere2 = randint(lungime_cromozom // 2, lungime_cromozom)
             if etapa == 0:
-                g.write(f"\nRecombinare dintre cromozomul {cr1 + 1} si cromozomul {cr2 + 1}:\n{cromozomi_noi[cr1]}  {cromozomi_noi[cr2]} si punct de rupere {punct_de_rupere}\n")
-            cromozomi_noi[cr1], cromozomi_noi[cr2] = cross2(cromozomi_noi[cr1], cromozomi_noi[cr2], punct_de_rupere)
+                g.write(f"\nRecombinare dintre cromozomul {cr1 + 1} si cromozomul {cr2 + 1}:\n{cromozomi_noi[cr1]}  {cromozomi_noi[cr2]} si punct de rupere {punct_de_rupere, punct_de_rupere2}\n")
+            cromozomi_noi[cr1], cromozomi_noi[cr2] = cross2(cromozomi_noi[cr1], cromozomi_noi[cr2], punct_de_rupere, punct_de_rupere2)
             if etapa == 0:
                 g.write(f"Rezultat   {cromozomi_noi[cr1]}  {cromozomi_noi[cr2]}\n")
 
     else:  # lungime impara deci luam pe toti cate 2 si pe ultimii 3 toti odata
         if lg != 1:
             while lg != 3:  # daca e 1 nu face nimic
-                cr1 = recombinare_indici.pop()
-                cr2 = recombinare_indici.pop()
+                cr1 = deepcopy(choice(recombinare_indici))
+                recombinare_indici.remove(cr1)
+                cr2 = deepcopy(choice(recombinare_indici))
+                recombinare_indici.remove(cr2)
                 lg -= 2
-                punct_de_rupere = randint(0, lungime_cromozom)  # generez punct de rupere random de la 0 la lungimea cromozomului
+                punct_de_rupere = randint(0, lungime_cromozom // 2)  # generez punct de rupere random de la 0 la lungimea cromozomului
+                punct_de_rupere2 = randint(lungime_cromozom // 2, lungime_cromozom)
                 if etapa == 0:
-                    g.write(f"\nRecombinare dintre cromozomul {cr1 + 1} si cromozomul {cr2 + 1}:\n{cromozomi_noi[cr1]}  {cromozomi_noi[cr2]} si punct de rupere {punct_de_rupere}\n")
-                cromozomi_noi[cr1], cromozomi_noi[cr2] = cross2(cromozomi_noi[cr1], cromozomi_noi[cr2], punct_de_rupere)
+                    g.write(f"\nRecombinare dintre cromozomul {cr1 + 1} si cromozomul {cr2 + 1}:\n{cromozomi_noi[cr1]}  {cromozomi_noi[cr2]} si punct de rupere {punct_de_rupere, punct_de_rupere2}\n")
+                cromozomi_noi[cr1], cromozomi_noi[cr2] = cross2(cromozomi_noi[cr1], cromozomi_noi[cr2], punct_de_rupere, punct_de_rupere2)
                 if etapa == 0:
                     g.write(f"Rezultat   {cromozomi_noi[cr1]}  {cromozomi_noi[cr2]}\n")
             else:  # aici se termina whileul si trebuie sa iau o pereche de 3
@@ -297,34 +307,57 @@ for etapa in range(nr_etape):  # rulez pentru un numar de etape dat
         g.write('\n')
 
     # -----------------------------------------------------------------------------------------------------------
-    # ------------------------------------------Mutatia (regulata):----------------------------------------------
+    # ------------------------------------------Mutatia:----------------------------------------------
     # -----------------------------------------------------------------------------------------------------------
 
     if etapa == 0:
         g.write(f"Probabilitate de mutatie pentru fiecare gena {probabilitate_mutatie}\n")
-        g.write("Au fost modificati cromozomii:\n")
+        #g.write("Au fost modificati cromozomii:\n")
 
     indice_cromozom_mutat = []
+    #
+    # for i in range(dimensiune_populatie):
+    #     for j in range(lungime_cromozom):  # mutatia regulata, iterez prin fiecare gena si am sansa foarte mica sa o schimb
+    #         u = random()
+    #         if u < probabilitate_mutatie:
+    #             populatie_noua[i][j] = abs(populatie_noua[i][j] - 1)
+    #             if i not in indice_cromozom_mutat:
+    #                 indice_cromozom_mutat.append(i)
 
     for i in range(dimensiune_populatie):
-        for j in range(lungime_cromozom):  # mutatia regulata, iterez prin fiecare gena si am sansa foarte mica sa o schimb
-            u = random()
-            if u < probabilitate_mutatie:
-                populatie_noua[i][j] = abs(populatie_noua[i][j] - 1)
-                if i not in indice_cromozom_mutat:
-                    indice_cromozom_mutat.append(i)
+        u = random()
+        if u < probabilitate_mutatie:
+            indice_cromozom_mutat.append(i)
+    #print(indice_cromozom_mutat)
 
-    if etapa == 0:
-        for i in range(len(indice_cromozom_mutat)):
-            g.write(f"{i + 1}\n")
-        g.write('\n')
+    for i in range(len(indice_cromozom_mutat)):
+        u = randrange(0, lungime_cromozom)
+        populatie_noua[indice_cromozom_mutat[i]][u] = abs(populatie_noua[indice_cromozom_mutat[i]][u] - 1)
+
+    #print(indice_cromozom_mutat)
+    #f etapa == 0:
+        #for i in range(len(indice_cromozom_mutat)):
+            #g.write(f"{indice_cromozom_mutat[i] + 1}\n")
+        #g.write('\n')
 
     # -----------------------------------------------------------------------------------------------------------
     # ------------------------------------------Populatia dupa mutatie:----------------------------------
     # -----------------------------------------------------------------------------------------------------------
 
-    if etapa == 0:
-        g.write("Dupa mutatie:\n")
+    # for i in range(dimensiune_populatie):
+    #     u = random()
+    #     if u < 0.25:
+    #         g.write(f"\nModific cromozomul {i}\n")
+    #         g.write(f"Valoarea initiala: {populatie_noua[i]} \n")
+    #         punct_de_rupere = randint(0, lungime_cromozom // 2)
+    #         punct_de_rupere2 = randint(lungime_cromozom // 2, lungime_cromozom)
+    #         print(populatie_noua[i])
+    #         populatie_noua[i] = flip(populatie_noua[i], punct_de_rupere, punct_de_rupere2)
+    #         print(populatie_noua[i])
+    #         g.write(f"Pozitiile {punct_de_rupere} si {punct_de_rupere2}\n")
+    #         g.write(f"Dupa flip: {populatie_noua[i]}\n")
+    # if etapa == 0:
+    #     g.write("Dupa mutatie:\n")
 
     cromozomi_noi = []
     x_codificat_nou = []
@@ -344,10 +377,19 @@ for etapa in range(nr_etape):  # rulez pentru un numar de etape dat
             g.write(f"{i + 1}: {cromozomi_noi[i]} x= {x_codificat_nou[i]} f= {fitness_nou[i]}\n")
         g.write('\n')
 
+
+
+
+
     populatie_noua.append(elitist_cromozom)
     populatie_initiala = populatie_noua.copy()
     dimensiune_populatie += 1
 
+    elitist = "".join(str(ch) for ch in elitist_cromozom)
+    x_elitst = get_x(elitist)
+    fitness_elitist = get_fitness(x_elitst)
+
+    print(elitist, x_elitst, fitness_elitist)
 # -----------------------------------------------------------------------------------------------------------
 # ------------------------------------------Maximul fitnessului si media pentru fiecare generatei:-----------
 # -----------------------------------------------------------------------------------------------------------
@@ -355,3 +397,6 @@ for etapa in range(nr_etape):  # rulez pentru un numar de etape dat
 g.write("\nEvolutia maximului si valoarea medie a performantei:\n")
 for i in range(len(max_fitness)):
     g.write(f"Generatia {i + 1}: Maximul de fitness {max_fitness[i]} <--- --- ---> valoarea medie a generatiei {val_medie_perform[i]}\n")
+
+f.close()
+g.close()
