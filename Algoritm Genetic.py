@@ -1,6 +1,5 @@
 # PARASCHIV ALEXANDRU-ANDREI
-# GRUPA 243
-# tema 2 algoritm genetic pentru determinarea maximului unei functii pozitive
+# algoritm genetic pentru determinarea maximului unei functii pozitive
 
 
 # ---------------------------------------------------------------------------------------------------------
